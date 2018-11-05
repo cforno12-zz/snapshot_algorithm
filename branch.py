@@ -10,25 +10,40 @@ class Branch:
         self.name = name
         self.port = port
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.own_branch = bank_pb2.BranchMessage()
         self.time_interval = time
         self.balance = 0
         self.branches = []
         self.socket = sock
 
+    def init_msg(self, msg):
+        self.balance = msg.balance
+        self.branches = msg.branches
 
-    def handle_message(self, client_socket, client_add):
+    def transfer_msg(self, msg):
+        if msg.dst_branch == self.name:
+            self.balance += msg.money
+        else:
+            print("Recieved wrong transfer message")
+
+    def parse_message(self, client_socket, client_add, msg):
+        msg_type = msg.WhichOneOf("branch_message")
+
+        if msg_type == "init_branch":
+            self.init_msg(client_socket, client_add, msg.init_branch)
+        elif msg_type == "transfer":
+            self.transfer_msg(client_socket, client_add, msg)
+        #TODO: put in other cases for 
+
+
+    def listen_for_message(self, client_socket, client_add):
         while True:
             msg = client_socket.recv(1024)
             if not msg:
                 break
             
-            self.own_branch.ParseFromString(msg)
-            print self.own_branch
-            sys.exit(0)
-                
+            msg = bank_pb2.BranchMessage().ParseFromString(msg)
+            self.parse_message(client_socket, client_add, msg)
 
-        
 
     def run(self):
         self.socket.bind((self.ip, self.port))
@@ -38,21 +53,12 @@ class Branch:
             try:
                 print "Branch on ", self.ip, "on port", self.port
                 client_socket, client_add = self.socket.accept()
-                self.handle_message(client_socket, client_add)
+                self.listen_for_message(client_socket, client_add)
                 
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
                 sys.exit(0)
-
-                
-def init_valid(name, ip, port, m):
-    branch = m.Branch()
-
-    if branch.name == name and branch.ip == ip  and branch.port == port:
-        return True
-    else:
-        return False
 
 if __name__ == "__main__":
 
@@ -69,25 +75,6 @@ if __name__ == "__main__":
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     current_branch = Branch(name, port, time_interval, mysocket)
     current_branch.run()
-
-
-
-    # once we recieve a message we check if the init message is populated
-    # if it isn't then we assume it is a transfer message
-    message = bank_pb2.BranchMessage()
-    
-    if message.init_branch.Branch().name == '':
-        # it is a transfer message
-        pass
-    else:
-        #it is an init message
-        message = message.init_branch
-        if init_valid(name, ip, port, message):
-            balance = message.balance
-            for b in message.all_branches:
-                branches.extend(b)
-        else:
-            print("ERROR: Init message was sent to the wrong branch.")
 
     
 
