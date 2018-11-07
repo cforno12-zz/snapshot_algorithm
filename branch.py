@@ -13,11 +13,20 @@ class Branch:
         self.time_interval = time
         self.balance = 0
         self.branches = []
-        self.socket = sock
+        self.socket = sock # server socket
+        self.branch_sockets = {} # client sockets of all the other branches
+
+    def init_connections(self):
+        for b in branches:
+            branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            branch_socket.connect((b.ip, b.port))
+            branch_sockets[b.name] = branch_socket
+
 
     def init_msg(self, msg):
         self.balance = msg.balance
-        self.branches = msg.branches
+        self.branches = msg.all_branches
+        self.init_connections()
 
     def transfer_msg(self, msg):
         if msg.dst_branch == self.name:
@@ -31,8 +40,8 @@ class Branch:
         if msg_type == "init_branch":
             self.init_msg(client_socket, client_add, msg.init_branch)
         elif msg_type == "transfer":
-            self.transfer_msg(client_socket, client_add, msg)
-        #TODO: put in other cases for 
+            self.transfer_msg(client_socket, client_add, msg.transfer)
+        #TODO: put in other cases for other messages
 
 
     def listen_for_message(self, client_socket, client_add):

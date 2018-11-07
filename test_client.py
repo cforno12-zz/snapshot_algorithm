@@ -7,19 +7,29 @@ import bank_pb2
 if __name__ == "__main__":
     message  = bank_pb2.BranchMessage()
 
-    branch = message.init_branch.Branch()
+
+
+    for i in range(0,4):
+        branch = message.init_branch.Branch()
+        n = "Cris"
+        n += str(i)
+        branch.name = n
+        branch.ip = socket.gethostbyname(socket.gethostname())
+        branch.port = 9090 + i
+        message.init_branch.balance = 1000
     
-    branch.name = "Cris"
-    branch.ip = socket.gethostbyname(socket.gethostname())
-    branch.port = 9090
-    message.init_branch.balance = 1000
+        message.init_branch.all_branches.extend([branch])
     
-    message.init_branch.all_branches.extend([branch])
 
     print message
 
+    for b in message.init_branch.all_branches:
+        print "name:", b.name
+        print "ip:", b.ip
+        print "port:", b.port
+
     
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+'''    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     port = 9080
 
@@ -27,5 +37,5 @@ if __name__ == "__main__":
 
     s.sendall(message.SerializeToString())
 
-    s.close()
+    s.close()'''
     
