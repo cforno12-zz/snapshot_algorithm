@@ -20,7 +20,7 @@ class Branch:
         for b in self.branches:
             branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             branch_socket.connect((b.ip, b.port))
-            branch_sockets[b.name] = branch_socket
+            self.branch_sockets[b.name] = branch_socket
 
 
     def init_msg(self, msg):
@@ -62,7 +62,13 @@ class Branch:
                 print "Branch on ", self.ip, "on port", self.port
                 client_socket, client_add = self.socket.accept()
                 self.listen_for_message(client_socket, client_add)
-                
+                print("New stuff") 
+                print(self.name)
+                print(self.port)
+                print(self.ip)
+                print(self.time_interval)
+                print(self.balance)
+                print(self.branches)
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
