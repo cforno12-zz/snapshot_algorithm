@@ -2,6 +2,7 @@ import sys
 import socket
 import random
 import threading
+import time
 
 sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
 import bank_pb2
@@ -25,8 +26,6 @@ class Branch:
             branch_socket.connect((b.ip, b.port))
             self.branch_sockets[b.name] = branch_socket
 
-
-
     def init_msg(self, msg):
         self.balance = msg.balance
         self.branches = msg.all_branches
@@ -39,14 +38,24 @@ class Branch:
             self.balance_lock.release()
         else:
             print("Recieved wrong transfer message")
+            
     def send_transfer_msg(self):
-        for name, socket in self.branch_sockets.items():
-            # check if we have enough money
+        for name, socket in self.branch_sockets.iteritems():
             self.balance_lock.acquire()
             send_balance = round(random.randint(self.balance*0.01, self.balance*0.05))
+            # check if we have enough money
             if (self.balance - send_balance) < 0:
-               print "" 
-            
+                print "Cannot send more money."
+                self.balance_lock.release()
+                continue
+            self.balance -= send_balance
+            self.balance_lock.release()
+            transfer_message = bank_pb2.BranchMessage()
+            transfer_message.transfer.money = send_balance
+            transfer_message.transfer.src_branch = self.name
+            transfer_message.transfer.dst_branch = name
+            socket.sendall(transfer_message.SerializeToString())
+            time.sleep(self.time_interval*0.001)
             
 
     def parse_message(self, client_socket, client_add, msg):
