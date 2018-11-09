@@ -58,8 +58,9 @@ def main():
     
     for i,message in enumerate(message_array):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((socket.gethostbyname(target_branches[i][1]), target_branches[i][2]))
-        s.sendall(message.SerializeToString())
+
+        s.connect((socket.gethostbyname(branch.ip), branch.port))
+        s.sendall(message.SerializeToString()+'/0')
         s.close()
     
     #message = bank_pb2.BranchMessage()
