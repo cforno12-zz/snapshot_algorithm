@@ -29,7 +29,7 @@ message Marker {
 }
 
 message RetrieveSnapshot {
-2  uint32 snapshot_id = 1;
+  uint32 snapshot_id = 1;
 }
 
 message ReturnSnapshot {

@@ -22,14 +22,8 @@ if __name__ == "__main__":
     
 
     print message
-
-    for b in message.init_branch.all_branches:
-        print "name:", b.name
-        print "ip:", b.ip
-        print "port:", b.port
-
     
-'''    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     port = 9080
 
@@ -37,5 +31,5 @@ if __name__ == "__main__":
 
     s.sendall(message.SerializeToString())
 
-    s.close()'''
+    s.close()
     

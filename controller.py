@@ -57,6 +57,7 @@ def main():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((socket.gethostbyname(ip), port))
         print(message.SerializeToString())
+        message
         s.sendall(message.SerializeToString())
         s.close()
 

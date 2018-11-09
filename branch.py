@@ -17,7 +17,7 @@ class Branch:
         self.branch_sockets = {} # client sockets of all the other branches
 
     def init_connections(self):
-        for b in branches:
+        for b in self.branches:
             branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             branch_socket.connect((b.ip, b.port))
             branch_sockets[b.name] = branch_socket
@@ -35,23 +35,22 @@ class Branch:
             print("Recieved wrong transfer message")
 
     def parse_message(self, client_socket, client_add, msg):
-        msg_type = msg.WhichOneOf("branch_message")
+        msg_type = msg.WhichOneof("branch_message")
 
         if msg_type == "init_branch":
-            self.init_msg(client_socket, client_add, msg.init_branch)
+            self.init_msg(msg.init_branch)
         elif msg_type == "transfer":
-            self.transfer_msg(client_socket, client_add, msg.transfer)
+            self.transfer_msg(msg.transfer)
         #TODO: put in other cases for other messages
 
 
     def listen_for_message(self, client_socket, client_add):
-        while True:
-            msg = client_socket.recv(1024)
-            if not msg:
-                break
-            
-            msg = bank_pb2.BranchMessage().ParseFromString(msg)
-            self.parse_message(client_socket, client_add, msg)
+        
+        msg = client_socket.recv(1024)
+        if msg:
+            branch_message = bank_pb2.BranchMessage()
+            branch_message.ParseFromString(msg)
+            self.parse_message(client_socket, client_add, branch_message)
 
 
     def run(self):
