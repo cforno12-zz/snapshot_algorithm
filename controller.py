@@ -60,7 +60,7 @@ def main():
             message.init_branch.all_branches.extend([branch2])
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((socket.gethostbyname(branch.ip), branch.port))
-        s.sendall(message.SerializeToString())
+        s.sendall(message.SerializeToString()+'/0')
         s.close()
 
     #message = bank_pb2.BranchMessage()

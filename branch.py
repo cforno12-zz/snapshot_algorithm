@@ -39,7 +39,7 @@ class Branch:
         else:
             print("Recieved wrong transfer message")
             
-    def send_transfer_msg(self):
+    def send_transfer_msgs(self):
         for name, socket in self.branch_sockets.iteritems():
             self.balance_lock.acquire()
             send_balance = round(random.randint(self.balance*0.01, self.balance*0.05))
@@ -54,7 +54,7 @@ class Branch:
             transfer_message.transfer.money = send_balance
             transfer_message.transfer.src_branch = self.name
             transfer_message.transfer.dst_branch = name
-            socket.sendall(transfer_message.SerializeToString())
+            socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
             
 
@@ -65,15 +65,23 @@ class Branch:
             self.init_msg(msg.init_branch)
         elif msg_type == "transfer":
             self.transfer_msg(msg.transfer)
-        #TODO: put in other cases for other messages
-
+        elif msg_type == "init_snapshot":
+            pass
+        elif msg_type == "marker":
+            pass
+        elif msg_type == "retrieve_snapshot":
+            pass
+        elif msg_type == "return_snapshot":
+            pass
+        elif msg_type == None:
+            print "There was an error recieving a message"
 
     def listen_for_message(self, client_socket, client_add):
-        
         msg = client_socket.recv(1024)
         if msg:
+            for m in msg.split('\0')
             branch_message = bank_pb2.BranchMessage()
-            branch_message.ParseFromString(msg)
+            branch_message.ParseFromString(m)
             self.parse_message(client_socket, client_add, branch_message)
 
 
@@ -87,14 +95,9 @@ class Branch:
             try:
                 print "Branch on ", self.ip, "on port", self.port
                 client_socket, client_add = self.socket.accept()
-                self.listen_for_message(client_socket, client_add)
-                print("New stuff") 
-                print(self.name)
-                print(self.port)
-                print(self.ip)
-                print(self.time_interval)
-                print(self.balance)
-                print(self.branches)
+                self.listen_for_message(client_socket, client_add) # start a new thread here
+                self.send_tranfer_messages() # start another thread here
+                
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
