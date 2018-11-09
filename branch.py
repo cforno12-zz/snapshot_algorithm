@@ -1,7 +1,9 @@
 import sys
 import socket
-sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
+import random
+import threading
 
+sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
 import bank_pb2
 
 class Branch:
@@ -12,6 +14,7 @@ class Branch:
         self.ip = socket.gethostbyname(socket.gethostname())
         self.time_interval = time
         self.balance = 0
+        self.balance_lock = threading.Lock()
         self.branches = []
         self.socket = sock # server socket
         self.branch_sockets = {} # client sockets of all the other branches
@@ -23,16 +26,28 @@ class Branch:
             self.branch_sockets[b.name] = branch_socket
 
 
+
     def init_msg(self, msg):
         self.balance = msg.balance
         self.branches = msg.all_branches
         self.init_connections()
 
-    def transfer_msg(self, msg):
+    def recieve_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
+            self.balance_lock.acquire()
             self.balance += msg.money
+            self.balance_lock.release()
         else:
             print("Recieved wrong transfer message")
+    def send_transfer_msg(self):
+        for name, socket in self.branch_sockets.items():
+            # check if we have enough money
+            self.balance_lock.acquire()
+            send_balance = round(random.randint(self.balance*0.01, self.balance*0.05))
+            if (self.balance - send_balance) < 0:
+               print "" 
+            
+            
 
     def parse_message(self, client_socket, client_add, msg):
         msg_type = msg.WhichOneof("branch_message")
@@ -56,6 +71,8 @@ class Branch:
     def run(self):
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
+
+        # create a sender thread here
 
         while True:
             try:
@@ -84,6 +101,9 @@ if __name__ == "__main__":
     ip = socket.gethostbyname(socket.gethostname())
     port = int(sys.argv[2])
     time_interval = sys.argv[3]
+
+    # selecting random time interval
+    time_interval = random.randint(0,time_interval+1)
     
 
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
