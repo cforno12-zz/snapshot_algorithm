@@ -40,29 +40,28 @@ def main():
         print("<branchname> <ip address> <port number>")
         return 1
 
-   
     each_balance = total_money//len(target_branches)
-    all_branches = []
+    message = bank_pb2.BranchMessage()
+    message.init_branch.balance = each_balance
+
+    message_array = []
+
     for branch_tuple in target_branches:
         name, ip, port = branch_tuple
 
-        message = bank_pb2.BranchMessage()
         branch = message.init_branch.Branch()
         branch.name = name
         branch.ip = ip
         branch.port = port
-        message.init_branch.balance = each_balance
-
-        all_branches.append((message, branch))
-
-    for message,branch in all_branches:
-        for _,branch2 in all_branches:
-            message.init_branch.all_branches.extend([branch2])
+        message.init_branch.all_branches.extend([branch])
+        message_array.append(message)
+    
+    for i,message in enumerate(message_array):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((socket.gethostbyname(branch.ip), branch.port))
+        s.connect((socket.gethostbyname(target_branches[i][1]), target_branches[i][2]))
         s.sendall(message.SerializeToString())
         s.close()
-
+    
     #message = bank_pb2.BranchMessage()
     #init_branch = message.init_branch
     #transfer = message.transfer
