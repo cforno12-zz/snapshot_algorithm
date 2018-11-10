@@ -81,6 +81,8 @@ def main():
         s.sendall(message.SerializeToString()+'\0')
         socket_map[target_branches[i][0]] = s
 
+    return
+
     # Snapshots!
     global_snapshot_id = 0
     while True:
@@ -91,15 +93,22 @@ def main():
         global_snapshot_id += 1
         # Initiate a new snapshot to a random branch.
         # branch_to_initiate is the name of the branch
-        branch_to_initiate = \
-                target_branches[randint(0, len(target_branches)-1)][0]
+        branch_to_initiate = target_branches[randint(0, len(target_branches)-1)][0]
         print("Chose " + branch_to_initate + " to initiate snapshot.")
 
         # Build the message and send it
         snapshot_message = bank_pb2.InitSnapshot()
         snapshot_message.snapshot_id = global_snapshot_id
-        socket_map[branch_to_initiate].sendall(snapshot_message.SerializeToString() + '\0')
         
+        print("Waiting for snapshot completion...")
+        socket_map[branch_to_initiate].sendall(snapshot_message.SerializeToString() + '\0')
+        sleep(3)
+
+        # Retrieve the snapshots
+        ret = message.RetrieveSnapshot()
+        print(ret)
+
+        return
 
     #message = bank_pb2.BranchMessage()
     #init_branch = message.init_branch
