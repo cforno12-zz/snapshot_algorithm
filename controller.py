@@ -1,5 +1,8 @@
 import sys
 import socket
+from random import randint
+from time import sleep
+
 sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
 
 import bank_pb2
@@ -40,12 +43,26 @@ def main():
         print("<branchname> <ip address> <port number>")
         return 1
 
+    # Sort in alphabetical order by name
+    target_branches.sort(key=lambda tup:tup[0])
+
+    # Each one gets the same amount of money
     each_balance = total_money//len(target_branches)
+
+    # New init branch message
+    # Idea: send the same message to each branch since
+    # each gets the same amount of money
     message = bank_pb2.BranchMessage()
     message.init_branch.balance = each_balance
 
+    # Saves all messages so we can populate all_branches before sending
     message_array = []
+    # socket_map[<str>] -> socket object
+    # Maps the name of a branch to the socket that
+    # can be used to send data to it.
+    socket_map = {}
 
+    # Put each branch in a message and put it in the array
     for branch_tuple in target_branches:
         name, ip, port = branch_tuple
 
@@ -55,14 +72,35 @@ def main():
         branch.port = port
         message.init_branch.all_branches.extend([branch])
         message_array.append(message)
-    
+   
+    # Send each message
     for i,message in enumerate(message_array):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         s.connect((socket.gethostbyname(branch.ip), branch.port))
-        s.sendall(message.SerializeToString()+'/0')
-        s.close()
-    
+        s.sendall(message.SerializeToString()+'\0')
+        socket_map[target_branches[i][0]] = s
+
+    # Snapshots!
+    global_snapshot_id = 0
+    while True:
+        # Sleep between snapshots
+        sleep_time = randint(5, 10)
+        sleep(sleep_time)
+
+        global_snapshot_id += 1
+        # Initiate a new snapshot to a random branch.
+        # branch_to_initiate is the name of the branch
+        branch_to_initiate = \
+                target_branches[randint(0, len(target_branches)-1)][0]
+        print("Chose " + branch_to_initate + " to initiate snapshot.")
+
+        # Build the message and send it
+        snapshot_message = bank_pb2.InitSnapshot()
+        snapshot_message.snapshot_id = global_snapshot_id
+        socket_map[branch_to_initiate].sendall(snapshot_message.SerializeToString() + '\0')
+        
+
     #message = bank_pb2.BranchMessage()
     #init_branch = message.init_branch
     #transfer = message.transfer
@@ -71,6 +109,9 @@ def main():
     #return_snapshot = message.return_snapshot
 
     #branch = populate_branch(message.init_branch.Branch())
+
+
+
 
 
 if main():

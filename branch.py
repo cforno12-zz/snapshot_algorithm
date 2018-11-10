@@ -96,6 +96,9 @@ class Branch:
         
 
     def parse_message(self, client_socket, client_add, msg):
+        if not msg:
+            print "Error: null message"
+            return
         msg_type = msg.WhichOneof("branch_message")
 
         if msg_type == "init_branch":
@@ -110,8 +113,8 @@ class Branch:
             self.retrieve_snapshot_msg(msg.retrieve_snapshot)
         elif msg_type == "return_snapshot":
             self.return_snapshot_msg(msg.return_snapshot)
-        elif msg_type == None:
-            print "There was an error recieving a message"
+        else:
+            print "Unrecognized message type: " + msg_type
 
     def listen_for_message(self, client_socket, client_add):
         msg = client_socket.recv(1024)
