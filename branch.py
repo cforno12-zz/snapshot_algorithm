@@ -4,9 +4,17 @@ import random
 import threading
 import thread
 import time
+import collections
 
 sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
 import bank_pb2
+
+class Snapshot:
+    def __init__(self, snap_id, balance):
+        self.snap_id = snap_id
+        self.balance = balance
+        self.channels = {} # key: name of source; value: money transfered
+        self.retrieved = False
 
 class Branch:
 
@@ -19,8 +27,9 @@ class Branch:
         self.balance_lock = threading.Lock()
         self.branches = []
         self.socket = sock # server socket
-        self.branch_sockets = {} # client sockets of all the other branches
+        self.branch_sockets = {} # key: name of other branch; value: client socket of that branch
         self.log_bool = False
+        self.snapshots = {} #key: snap_id; value: snap_obj
 
     def init_connections(self):
         for b in self.branches:
@@ -36,6 +45,9 @@ class Branch:
 
     def recieve_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
+            for ss_id, ss_obj in self.snapshots:
+                if ss_obj.retrieved == False:
+                    ss_obj.channels[msg.dst_branch] = msg.money
             self.balance_lock.acquire()
             self.balance += msg.money
             self.balance_lock.release()
@@ -58,15 +70,32 @@ class Branch:
             transfer_message.transfer.src_branch = self.name
             transfer_message.transfer.dst_branch = name
             if self.log_bool:
-                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name  
+                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
+                print self.name + "'s new balance: " + self.balance
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
 
         thread.exit()
+
+    def init_snapshot(self, msg):
+        snapshot_id = msg.snapshot_id
+
+        marker_msg = bank_pb2.BranchMessage()
+        marker_msg.marker.snapshot_id = snapshot_id
+        self.balance_lock.aquire()
+        snap_obj = Snapshot(snapshot_id, self.balance)
+        self.balance_lock.release()
+
+        for name, socket in self.branch_sockets.iteritems():
+            snap_obj.channels[name] = 0 # no money has been transferred yet
+            marker_msg.marker.src_branch = self.name
+            marker_msg.marker.src_branch = self.name
+            socket.sendall(marker_msg.SerializeToString + '\0')
+        self.snapshots[snapshot_id] = snap_obj
+        
         
 
     def parse_message(self, client_socket, client_add, msg):
-        print "we in this"
         msg_type = msg.WhichOneof("branch_message")
 
         if msg_type == "init_branch":
@@ -103,10 +132,9 @@ class Branch:
         self.time_interval = random.randint(0,self.time_interval+1) # choosing a random time for sleeping
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
-
+        print "Branch on ", self.ip, "on port", self.port
         while True:
             try:
-                print "Branch on ", self.ip, "on port", self.port
                 client_socket, client_add = self.socket.accept()
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
                 # self.listen_for_message(client_socket, client_add) # start a new thread here
