@@ -2,6 +2,7 @@ import sys
 import socket
 import random
 import threading
+import thread
 import time
 
 sys.path.append('/home/vchaska1/protobuf/protobuf-3.5.1/python')
@@ -19,12 +20,14 @@ class Branch:
         self.branches = []
         self.socket = sock # server socket
         self.branch_sockets = {} # client sockets of all the other branches
+        self.log_bool = False
 
     def init_connections(self):
         for b in self.branches:
-            branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            branch_socket.connect((b.ip, b.port))
-            self.branch_sockets[b.name] = branch_socket
+            if not b.name == self.name: # we don't want to connect to ourselves
+                branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                branch_socket.connect((b.ip, b.port))
+                self.branch_sockets[b.name] = branch_socket
 
     def init_msg(self, msg):
         self.balance = msg.balance
@@ -54,49 +57,61 @@ class Branch:
             transfer_message.transfer.money = send_balance
             transfer_message.transfer.src_branch = self.name
             transfer_message.transfer.dst_branch = name
+            if self.log_bool:
+                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name  
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
-            
+
+        thread.exit()
+        
 
     def parse_message(self, client_socket, client_add, msg):
+        print "we in this"
         msg_type = msg.WhichOneof("branch_message")
 
         if msg_type == "init_branch":
             self.init_msg(msg.init_branch)
         elif msg_type == "transfer":
-            self.transfer_msg(msg.transfer)
+            self.recieve_transfer_msg(msg.transfer)
         elif msg_type == "init_snapshot":
-            pass
+            self.init_snapshot_msg(msg.init_snapshot)
         elif msg_type == "marker":
-            pass
+            self.recieve_marker_msg(msg.marker)
         elif msg_type == "retrieve_snapshot":
-            pass
+            self.retrieve_snapshot_msg(msg.retrieve_snapshot)
         elif msg_type == "return_snapshot":
-            pass
+            self.return_snapshot_msg(msg.return_snapshot)
         elif msg_type == None:
             print "There was an error recieving a message"
 
     def listen_for_message(self, client_socket, client_add):
         msg = client_socket.recv(1024)
         if msg:
-            for m in msg.split('\0')
-            branch_message = bank_pb2.BranchMessage()
-            branch_message.ParseFromString(m)
-            self.parse_message(client_socket, client_add, branch_message)
+            for m in msg.split('\0'):
+                branch_message = bank_pb2.BranchMessage()
+                branch_message.ParseFromString(m)
+                self.parse_message(client_socket, client_add, branch_message)
+        thread.exit()
 
 
     def run(self):
+        # checking if we should log
+
+        if self.time_interval >= 1000:
+            self.log_bool = True
+            
+        self.time_interval = random.randint(0,self.time_interval+1) # choosing a random time for sleeping
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
-
-        # create a sender thread here
 
         while True:
             try:
                 print "Branch on ", self.ip, "on port", self.port
                 client_socket, client_add = self.socket.accept()
-                self.listen_for_message(client_socket, client_add) # start a new thread here
-                self.send_tranfer_messages() # start another thread here
+                thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
+                # self.listen_for_message(client_socket, client_add) # start a new thread here
+                thread.start_new_thread(self.send_transfer_messages())
+                # self.send_tranfer_messages() # start another thread here
                 
             except KeyboardInterrupt:
                 self.socket.close()
@@ -112,19 +127,8 @@ if __name__ == "__main__":
     name = sys.argv[1]
     ip = socket.gethostbyname(socket.gethostname())
     port = int(sys.argv[2])
-    time_interval = sys.argv[3]
-
-    # selecting random time interval
-    time_interval = random.randint(0,time_interval+1)
-    
+    time_interval = int(sys.argv[3])
 
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     current_branch = Branch(name, port, time_interval, mysocket)
     current_branch.run()
-
-    
-
-
-    
-
-
