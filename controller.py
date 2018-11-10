@@ -76,6 +76,8 @@ def main():
         s.sendall(message.SerializeToString()+'\0')
         s.close()
 
+    return
+
     # Snapshots!
     global_snapshot_id = 0
     while True:
@@ -89,11 +91,13 @@ def main():
         branch_to_initiate = target_branches[randint(0, len(target_branches)-1)]
         print("Chose " + branch_to_initiate[0] + " to initiate snapshot.")
 
+
         # Build the message and send it
         snapshot_message = bank_pb2.InitSnapshot()
         snapshot_message.snapshot_id = global_snapshot_id
         
         print("Waiting for snapshot completion...")
+
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         new_socket.connect((socket.gethostbyname(branch_to_initiate[1]),branch_to_initiate[2]))
         new_socket.sendall(snapshot_message.SerializeToString() + '\0')
@@ -111,8 +115,6 @@ def main():
         new_socket.close()
         break 
     
-    
-
     #message = bank_pb2.BranchMessage()
     #init_branch = message.init_branch
     #transfer = message.transfer
