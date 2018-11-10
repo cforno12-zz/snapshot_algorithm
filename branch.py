@@ -92,7 +92,7 @@ class Branch:
         self.balance_lock.release()
         self.send_marker_msgs(marker_msg, snap_obj)
 
-    def send_marker_msgs(self, marker_msg, snap_obj)
+    def send_marker_msgs(self, marker_msg, snap_obj):
         #sending marker messages to all other branches
         for name, socket in self.branch_sockets.iteritems():
             snap_obj.channels[name] = 0 # no money has been transferred yet
@@ -170,9 +170,10 @@ class Branch:
                 client_socket, client_add = self.socket.accept()
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
                 # self.listen_for_message(client_socket, client_add) # start a new thread here
-                thread.start_new_thread(self.send_transfer_messages())
+                thread.start_new_thread(self.send_transfer_msgs())
                 # self.send_tranfer_messages() # start another thread here
-                
+                print(self.balance)
+                print(self.branches)
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
