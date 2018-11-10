@@ -31,6 +31,7 @@ class Branch:
         self.branches = []
         self.socket = sock # server socket
         self.branch_sockets = {} # key: name of other branch; value: client socket of that branch
+        self.controller_socket = None
         self.log_bool = False
         self.snapshots = {} #key: snap_id; value: snap_obj
 
@@ -41,7 +42,8 @@ class Branch:
                 branch_socket.connect((b.ip, b.port))
                 self.branch_sockets[b.name] = branch_socket
 
-    def init_msg(self, msg):
+    def init_msg(self, msg, controller_sock):
+        self.controller_socket = controller_sock
         self.balance = msg.balance
         self.branches = msg.all_branches
         self.init_connections()
@@ -107,6 +109,22 @@ class Branch:
             self.init_snapshot(msg)
         else:
             self.snapshots[snap_id].active_channels[msg.src_branch] = True
+
+    def retrieve_snapshot_msg(self, msg):
+        snap_id = msg.snapshot_id
+        self.snapshots[snap_id].retrieved = True
+        self.prepare_return_ss_msg(snapshots[snap_id])
+
+    def prepare_return_snapshot_msg(self, snap_obj):
+        return_msg = bank_pb2.BranchMessage()
+        local_snap = return_msg.LocalSnapshot()
+        local_snap.snapshot_id = snap_obj.snap_id
+        local_snap.balance = snap_obj.balance
+        for branch_name in sorted(snap_obj.channels.iterkeys()):
+            local_snap.channel_state.append(snap_obj.channels[branch_name])
+        
+        return_msg.local_snapshot = local_snap
+        self.controller_socket.sendall(return_msg.SerializeToString() + '\0')
             
     def parse_message(self, client_socket, client_add, msg):
         if not msg:
@@ -115,7 +133,7 @@ class Branch:
         msg_type = msg.WhichOneof("branch_message")
 
         if msg_type == "init_branch":
-            self.init_msg(msg.init_branch)
+            self.init_msg(msg.init_branch, client_socket)
         elif msg_type == "transfer":
             self.recieve_transfer_msg(msg.transfer)
         elif msg_type == "init_snapshot":
@@ -124,8 +142,6 @@ class Branch:
             self.recieve_marker_msg(msg.marker)
         elif msg_type == "retrieve_snapshot":
             self.retrieve_snapshot_msg(msg.retrieve_snapshot)
-        elif msg_type == "return_snapshot":
-            self.return_snapshot_msg(msg.return_snapshot)
         else:
             print "Unrecognized message type: " + msg_type
 
