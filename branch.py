@@ -14,6 +14,9 @@ class Snapshot:
         self.snap_id = snap_id
         self.balance = balance
         self.channels = {} # key: name of source; value: money transfered
+        # key: name of source; bool tells us if the channel is active or not
+        # all set as false by default, set to true when we recieve a marker message from the source a second time
+        self.active_channels = {}
         self.retrieved = False
 
 class Branch:
@@ -46,8 +49,8 @@ class Branch:
     def recieve_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots:
-                if ss_obj.retrieved == False:
-                    ss_obj.channels[msg.dst_branch] = msg.money
+                if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
+                    ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
             self.balance += msg.money
             self.balance_lock.release()
@@ -85,16 +88,26 @@ class Branch:
         self.balance_lock.aquire()
         snap_obj = Snapshot(snapshot_id, self.balance)
         self.balance_lock.release()
+        self.send_marker_msgs(marker_msg, snap_obj)
 
+    def send_marker_msgs(self, marker_msg, snap_obj)
+        #sending marker messages to all other branches
         for name, socket in self.branch_sockets.iteritems():
             snap_obj.channels[name] = 0 # no money has been transferred yet
+            snap_obj.active_channels[name] = False
             marker_msg.marker.src_branch = self.name
-            marker_msg.marker.src_branch = self.name
+            marker_msg.marker.dst_branch = name
             socket.sendall(marker_msg.SerializeToString + '\0')
         self.snapshots[snapshot_id] = snap_obj
-        
-        
 
+    def recieve_marker_msg(self, msg):
+        snap_id = msg.snapshot_id
+        if not snap_id in self.snapshots:
+            # this is the first time the branch has seen this snapshot
+            self.init_snapshot(msg)
+        else:
+            self.snapshots[snap_id].active_channels[msg.src_branch] = True
+            
     def parse_message(self, client_socket, client_add, msg):
         msg_type = msg.WhichOneof("branch_message")
 
