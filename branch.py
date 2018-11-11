@@ -30,21 +30,12 @@ class Branch:
         self.balance_lock = threading.Lock()
         self.branches = []
         self.socket = sock # server socket
-        self.branch_sockets = {} # key: name of other branch; value: client socket of that branch
         self.log_bool = False
         self.snapshots = {} #key: snap_id; value: snap_obj
-
-    def init_connections(self):
-        for b in self.branches:
-            if not b.name == self.name: # we don't want to connect to ourselves
-                branch_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                branch_socket.connect((b.ip, b.port))
-                self.branch_sockets[b.name] = branch_socket
 
     def init_msg(self, msg):
         self.balance = msg.balance
         self.branches = msg.all_branches
-        self.init_connections()
 
     def recieve_transfer_msg(self, msg):
         print("Trying to receive")
@@ -61,26 +52,27 @@ class Branch:
             print("Recieved wrong transfer message")
             
     def send_transfer_msgs(self):
-        print(self.branch_sockets)
-        for name, socket in self.branch_sockets.iteritems():
-            self.balance_lock.acquire()
-            send_balance = int(round(random.randint(int(self.balance*0.01), int(self.balance*0.05))))
-            # check if we have enough money
-            if (self.balance - send_balance) < 0:
-                print "Cannot send more money."
-                self.balance_lock.release()
-                continue
-            self.balance -= send_balance
+        random_branch = self.branches[random.randint(0, len(self.branches)-1)]
+        
+        self.balance_lock.acquire()
+        send_balance = int(round(random.randint(int(self.balance*0.01), int(self.balance*0.05))))
+        # check if we have enough money
+        if (self.balance - send_balance) < 0:
+            print "Cannot send more money."
             self.balance_lock.release()
-            transfer_message = bank_pb2.BranchMessage()
-            transfer_message.transfer.money = send_balance
-            transfer_message.transfer.src_branch = self.name
-            transfer_message.transfer.dst_branch = name
-            if self.log_bool:
-                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
-                print self.name + "'s new balance: " + str(self.balance)
-            socket.sendall(transfer_message.SerializeToString() + '\0')
-            time.sleep(self.time_interval*0.001)
+            continue
+        self.balance -= send_balance
+        self.balance_lock.release()
+        transfer_message = bank_pb2.BranchMessage()
+        transfer_message.transfer.money = send_balance
+        transfer_message.transfer.src_branch = self.name
+        transfer_message.transfer.dst_branch = name
+        if self.log_bool:
+            print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
+            print self.name + "'s new balance: " + str(self.balance)
+        socket.sendall(transfer_message.SerializeToString() + '\0')
+        
+        time.sleep(self.time_interval*0.001)
         self.send_transfer_msgs()
         thread.exit()
     
