@@ -176,6 +176,7 @@ class Branch:
                 client_socket, client_add = self.socket.accept()
                 print(client_add)
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
+
                 #self.send_transfer_msgs() # start another thread here
             except KeyboardInterrupt:
                 self.socket.close()
