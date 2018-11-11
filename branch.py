@@ -46,6 +46,7 @@ class Branch:
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots:
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
+                    print "we are setting the channel's state"
                     ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
             print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
@@ -80,6 +81,7 @@ class Branch:
             if self.log_bool:
                 print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
                 print self.name + "'s new balance: " + str(self.balance)
+
             print "Sending to " + name
             new_socket.sendall(transfer_message.SerializeToString() + '\0')
             new_socket.close() 
@@ -171,34 +173,24 @@ class Branch:
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
         print "Branch on ", self.ip, "on port", self.port
-<<<<<<< HEAD
+
         #client_socket, client_add = self.socket.accept()
         #self.listen_for_message(client_socket, client_add)
         #time.sleep(1)
-=======
-        client_socket, client_add = self.socket.accept()
-        self.listen_for_message(client_socket, client_add) # start a new thread here
-        print("initialized.")
-        print(self.name)
->>>>>>> More fun thread stuff
         while True:
             print("Just reset loop")
             try:
                 client_socket, client_add = self.socket.accept()
-<<<<<<< HEAD
+
                 print(client_add)
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
 
-=======
-                print("Just received a message from", client_add)
-                #thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
-                thread.start_new_thread(self.send_transfer_msgs())
->>>>>>> More fun thread stuff
                 #self.send_transfer_msgs() # start another thread here
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
                 sys.exit(0)
+        print "We are exiting our branch"
 
 if __name__ == "__main__":
 
