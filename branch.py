@@ -85,6 +85,7 @@ class Branch:
             time.sleep(self.time_interval*0.001)
         self.send_transfer_msgs()
         thread.exit()
+
     def init_snapshot(self, msg):
         snapshot_id = msg.snapshot_id
 
