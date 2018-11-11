@@ -61,6 +61,7 @@ def main():
     socket_map = {}
 
     # Put each branch in a message and put it in the array
+    print target_branches
     for branch_tuple in target_branches:
         name, ip, port = branch_tuple
 
@@ -69,6 +70,8 @@ def main():
         branch.ip = ip
         branch.port = port
         message.init_branch.all_branches.extend([branch])
+
+    print message
    
     # Send each message
     for name,ip,port in target_branches:
