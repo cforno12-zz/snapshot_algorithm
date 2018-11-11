@@ -52,6 +52,7 @@ class Branch:
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots:
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
+                    print "we are setting the channel's state"
                     ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
             self.balance += msg.money
@@ -63,7 +64,7 @@ class Branch:
         print(self.branch_sockets)
         for name, socket in self.branch_sockets.iteritems():
             self.balance_lock.acquire()
-            send_balance = int(round(random.randint(self.balance*0.01, self.balance*0.05)))
+            send_balance = int(round(random.randint(int(self.balance*0.01), int(self.balance*0.05))))
             # check if we have enough money
             if (self.balance - send_balance) < 0:
                 print "Cannot send more money."
@@ -80,7 +81,7 @@ class Branch:
                 print self.name + "'s new balance: " + str(self.balance)
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
-        
+        self.send_transfer_msgs()
         thread.exit()
     def init_snapshot(self, msg):
         snapshot_id = msg.snapshot_id
@@ -160,13 +161,14 @@ class Branch:
             try:
                 client_socket, client_add = self.socket.accept()
                 print("Just received a message from", client_add)
-                #thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
+                thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
                 thread.start_new_thread(self.send_transfer_msgs())
                 #self.send_transfer_msgs() # start another thread here
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
                 sys.exit(0)
+        print "We are exiting our branch"
 
 if __name__ == "__main__":
 

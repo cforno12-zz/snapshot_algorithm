@@ -72,11 +72,12 @@ def main():
    
     # Send each message
     for name,ip,port in target_branches:
+        print str(ip) + " " + str(port)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((socket.gethostbyname(ip), port))
         s.sendall(message.SerializeToString()+'\0')
         socket_map[name] = s
-
+'''
     # Snapshots!
     global_snapshot_id = 0
     while True:
@@ -111,7 +112,7 @@ def main():
     #retrieve_snapshot = message.retrieve_snapshot
     #return_snapshot = message.return_snapshot
 
-    #branch = populate_branch(message.init_branch.Branch())
+    #branch = populate_branch(message.init_branch.Branch())'''
 
 if main():
     print("AN ERROR OCCURRED: Non-zero return value")
