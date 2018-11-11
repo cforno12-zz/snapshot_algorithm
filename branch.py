@@ -91,6 +91,7 @@ class Branch:
                 time.sleep(2)
 
         thread.exit()
+    
     def init_snapshot(self, msg):
         snapshot_id = msg.snapshot_id
 
