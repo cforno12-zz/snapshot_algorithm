@@ -40,10 +40,11 @@ class Branch:
         thread.start_new_thread(self.send_transfer_msgs, ())
 
     def receive_transfer_msg(self, msg):
-        if msg.dst_branch == self.name:
+        if str(msg.dst_branch) == str(self.name):
             for ss_id, ss_obj in self.snapshots.iteritems():
-                if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
-                    ss_obj.channels[msg.src_branch] += msg.money
+                if str(msg.src_branch) in ss_obj.channels:
+                    if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
+                        ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
             print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
             self.balance += msg.money
