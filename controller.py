@@ -76,11 +76,8 @@ def main():
         s.sendall(message.SerializeToString()+'\0')
         s.close()
 
-    return
 
 
-'''
->>>>>>> fixed sending transfer messages function
     # Snapshots!
     global_snapshot_id = 0
     while True:
@@ -93,7 +90,6 @@ def main():
         # branch_to_initiate is the name of the branch
         branch_to_initiate = target_branches[randint(0, len(target_branches)-1)]
         print("Chose " + branch_to_initiate[0] + " to initiate snapshot.")
-
 
         # Build the message and send it
         snapshot_message = bank_pb2.InitSnapshot()
@@ -125,7 +121,7 @@ def main():
     #retrieve_snapshot = message.retrieve_snapshot
     #return_snapshot = message.return_snapshot
 
-    #branch = populate_branch(message.init_branch.Branch())'''
+    #branch = populate_branch(message.init_branch.Branch())
 
 if main():
     print("AN ERROR OCCURRED: Non-zero return value")

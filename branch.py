@@ -40,13 +40,10 @@ class Branch:
         thread.start_new_thread(self.send_transfer_msgs, ())
 
 
-    def recieve_transfer_msg(self, msg):
-        print("Trying to receive")
-        print(msg)
+    def receive_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots:
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
-                    print "we are setting the channel's state"
                     ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
             print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
@@ -158,13 +155,11 @@ class Branch:
             print "Unrecognized message type: " + str(msg_type)
 
     def listen_for_message(self, client_socket, client_add):
-        print "listening for a message"
         msg = client_socket.recv(1024)
         if msg:
             for m in msg.split('\0')[:-1]:
                 branch_message = bank_pb2.BranchMessage()
                 branch_message.ParseFromString(m)
-                print "parsing message: " + m
                 self.parse_message(client_socket, client_add, branch_message)
 
     def run(self):
@@ -181,7 +176,6 @@ class Branch:
         #self.listen_for_message(client_socket, client_add)
         #time.sleep(1)
         while True:
-            print("Just reset loop in run function")
             try:
                 client_socket, client_add = self.socket.accept()
 
@@ -193,7 +187,6 @@ class Branch:
                 self.socket.close()
                 print("Closing socket...")
                 sys.exit(0)
-        print "We are exiting our branch"
 
 if __name__ == "__main__":
 
