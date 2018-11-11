@@ -39,7 +39,6 @@ class Branch:
         self.controller = client_add
         thread.start_new_thread(self.send_transfer_msgs, ())
 
-
     def receive_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots.iteritems():
@@ -101,25 +100,27 @@ class Branch:
         print(marker_msg)
         print("Snap_obj:")
         print(snap_obj)
-        snapshot_id = marker_msg.marker.snapshot_id
+        snapshot_id = int(marker_msg.marker.snapshot_id)
 
         #sending marker messages to all other branches
         for branch in self.branches:
             name = str(branch.name)
-            new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            new_socket.connect((socket.gethostbyname(str(branch.ip)), int(branch.port)))
+            if self.name != name:
+                new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                new_socket.connect((socket.gethostbyname(str(branch.ip)), int(branch.port)))
 
-            snap_obj.channels[name] = 0 # no money has been transferred yet
-            snap_obj.active_channels[name] = False
-            marker_msg.marker.src_branch = self.name
-            marker_msg.marker.dst_branch = name
-            new_socket.sendall(marker_msg.SerializeToString() + '\0')
-            new_socket.close()
+                snap_obj.channels[name] = 0 # no money has been transferred yet
+                snap_obj.active_channels[name] = False
+                marker_msg.marker.src_branch = self.name
+                marker_msg.marker.dst_branch = name
+                new_socket.sendall(marker_msg.SerializeToString() + '\0')
+                new_socket.close()
 
+        print("Adding " + str(snapshot_id) + " to map to " + str(snap_obj))
         self.snapshots[snapshot_id] = snap_obj
 
     def receive_marker_msg(self, msg):
-        snap_id = msg.snapshot_id
+        snap_id = int(msg.snapshot_id)
         if not snap_id in self.snapshots:
             # this is the first time the branch has seen this snapshot
             self.init_snapshot(msg)
@@ -127,7 +128,8 @@ class Branch:
             self.snapshots[snap_id].active_channels[msg.src_branch] = True
 
     def retrieve_snapshot_msg(self, msg):
-        snap_id = msg.snapshot_id
+        snap_id = int(msg.snapshot_id)
+        print(self.snapshots)
         self.snapshots[snap_id].retrieved = True
         self.prepare_return_ss_msg(snapshots[snap_id])
 
