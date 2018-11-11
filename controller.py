@@ -76,8 +76,6 @@ def main():
         s.sendall(message.SerializeToString()+'\0')
         s.close()
 
-
-
     # Snapshots!
     global_snapshot_id = 0
     while True:
@@ -102,6 +100,27 @@ def main():
         new_socket.sendall(snapshot_message.SerializeToString() + '\0')
         new_socket.close() 
         sleep(3)
+
+
+        # Retrieve the snapshots
+        ret = bank_pb2.BranchMessage()
+        ret.init_snapshot.snapshot_id = global_snapshot_id
+        
+        for name,ip,port in target_branches:
+            ret_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ret_socket.connect((socket.gethostbyname(ip), port))
+            ret_socket.sendall(ret.SerializeToString() + '\0')
+        
+            rec = ret_socket.recv(1024)
+            snapshot_message = bank_pb2.BranchMessage()
+            snapshot_message.ParseFromString(rec)
+
+            print(snapshot_message)
+
+        new_socket.close()
+        break 
+    
+    
 
         # Retrieve the snapshots
         ret = bank_pb2.BranchMessage()
