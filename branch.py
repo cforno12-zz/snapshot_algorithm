@@ -42,13 +42,13 @@ class Branch:
 
     def receive_transfer_msg(self, msg):
         if msg.dst_branch == self.name:
-            for ss_id, ss_obj in self.snapshots:
+            for ss_id, ss_obj in self.snapshots.iteritems():
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
                     ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
-            print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
+            #print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
             self.balance += msg.money
-            print("New balance: " + str(self.balance))
+            #print("New balance: " + str(self.balance))
             self.balance_lock.release()
         else:
             print("Recieved wrong transfer message")
@@ -75,27 +75,34 @@ class Branch:
             transfer_message.transfer.money = send_balance
             transfer_message.transfer.src_branch = self.name
             transfer_message.transfer.dst_branch = name
-            if self.log_bool:
-                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
-                print self.name + "'s new balance: " + str(self.balance)
 
-            print "Sending to " + name
+            #if self.log_bool:
+                #print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
+                #print self.name + "'s new balance: " + str(self.balance)
+            #print "Sending to " + name
             new_socket.sendall(transfer_message.SerializeToString() + '\0')
             new_socket.close() 
             time.sleep(2)
         thread.exit()
 
     def init_snapshot(self, msg):
+        print("Initializing snapshot")
         snapshot_id = msg.snapshot_id
 
         marker_msg = bank_pb2.BranchMessage()
         marker_msg.marker.snapshot_id = snapshot_id
-        self.balance_lock.aquire()
+        self.balance_lock.acquire()
         snap_obj = Snapshot(snapshot_id, self.balance)
         self.balance_lock.release()
         self.send_marker_msgs(marker_msg, snap_obj)
 
     def send_marker_msgs(self, marker_msg, snap_obj):
+        print("Marker:")
+        print(marker_msg)
+        print("Snap_obj:")
+        print(snap_obj)
+        snapshot_id = marker_msg.marker.snapshot_id
+
         #sending marker messages to all other branches
         for branch in self.branches:
             name = str(branch.name)
@@ -106,7 +113,7 @@ class Branch:
             snap_obj.active_channels[name] = False
             marker_msg.marker.src_branch = self.name
             marker_msg.marker.dst_branch = name
-            new_socket.sendall(marker_msg.SerializeToString + '\0')
+            new_socket.sendall(marker_msg.SerializeToString() + '\0')
             new_socket.close()
 
         self.snapshots[snapshot_id] = snap_obj
@@ -124,7 +131,7 @@ class Branch:
         self.snapshots[snap_id].retrieved = True
         self.prepare_return_ss_msg(snapshots[snap_id])
 
-    def prepare_return_snapshot_msg(self, snap_obj):
+    def prepare_return_ss_msg(self, snap_obj):
         return_msg = bank_pb2.BranchMessage()
         local_snap = return_msg.LocalSnapshot()
         local_snap.snapshot_id = snap_obj.snap_id
@@ -146,7 +153,7 @@ class Branch:
         elif msg_type == "transfer":
             self.receive_transfer_msg(msg.transfer)
         elif msg_type == "init_snapshot":
-            self.init_snapshot_msg(msg.init_snapshot)
+            self.init_snapshot(msg.init_snapshot)
         elif msg_type == "marker":
             self.receive_marker_msg(msg.marker)
         elif msg_type == "retrieve_snapshot":
@@ -179,7 +186,6 @@ class Branch:
             try:
                 client_socket, client_add = self.socket.accept()
 
-                print(client_add)
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
 
                 #self.send_transfer_msgs() # start another thread here
