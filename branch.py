@@ -36,6 +36,7 @@ class Branch:
     def init_msg(self, msg):
         self.balance = msg.balance
         self.branches = msg.all_branches
+        thread.start_new_thread(self.send_transfer_msgs())
 
     def recieve_transfer_msg(self, msg):
         print("Trying to receive")
@@ -52,28 +53,27 @@ class Branch:
             print("Recieved wrong transfer message")
             
     def send_transfer_msgs(self):
-        random_branch = self.branches[random.randint(0, len(self.branches)-1)]
-        
-        self.balance_lock.acquire()
-        send_balance = int(round(random.randint(int(self.balance*0.01), int(self.balance*0.05))))
-        # check if we have enough money
-        if (self.balance - send_balance) < 0:
-            print "Cannot send more money."
-            self.balance_lock.release()
-            continue
-        self.balance -= send_balance
-        self.balance_lock.release()
-        transfer_message = bank_pb2.BranchMessage()
-        transfer_message.transfer.money = send_balance
-        transfer_message.transfer.src_branch = self.name
-        transfer_message.transfer.dst_branch = name
-        if self.log_bool:
-            print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
-            print self.name + "'s new balance: " + str(self.balance)
-        socket.sendall(transfer_message.SerializeToString() + '\0')
-        
-        time.sleep(self.time_interval*0.001)
-        self.send_transfer_msgs()
+        while True:
+            for name, socket in self.branch_sockets.iteritems():
+                self.balance_lock.acquire()
+                send_balance = int(round(random.randint(int(self.balance*0.01), int(self.balance*0.05))))
+                # check if we have enough money
+                if (self.balance - send_balance) < 0:
+                    print "Cannot send more money."
+                    self.balance_lock.release()
+                    continue
+                self.balance -= send_balance
+                self.balance_lock.release()
+                transfer_message = bank_pb2.BranchMessage()
+                transfer_message.transfer.money = send_balance
+                transfer_message.transfer.src_branch = self.name
+                transfer_message.transfer.dst_branch = name
+                if self.log_bool:
+                    print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
+                    print self.name + "'s new balance: " + str(self.balance)
+                print "Sending to " + name
+                socket.sendall(transfer_message.SerializeToString() + '\0')
+                time.sleep(2)
         thread.exit()
     
     def init_snapshot(self, msg):
@@ -128,11 +128,13 @@ class Branch:
             print "Unrecognized message type: " + str(msg_type)
 
     def listen_for_message(self, client_socket, client_add):
+        print "listening for a message"
         msg = client_socket.recv(1024)
         if msg:
             for m in msg.split('\0')[:-1]:
                 branch_message = bank_pb2.BranchMessage()
                 branch_message.ParseFromString(m)
+                print "parsing message: " + m
                 self.parse_message(client_socket, client_add, branch_message)
 
     def run(self):
@@ -145,17 +147,12 @@ class Branch:
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
         print "Branch on ", self.ip, "on port", self.port
-        client_socket, client_add = self.socket.accept()
-        self.listen_for_message(client_socket, client_add) # start a new thread here
-        print("initialized.")
-        print(self.name)
         while True:
-            print("Just reset loop")
+            print("Just reset loop in run function")
             try:
                 client_socket, client_add = self.socket.accept()
                 print("Just received a message from", client_add)
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
-                thread.start_new_thread(self.send_transfer_msgs())
                 #self.send_transfer_msgs() # start another thread here
             except KeyboardInterrupt:
                 self.socket.close()
