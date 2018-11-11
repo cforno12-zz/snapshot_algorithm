@@ -79,7 +79,6 @@ class Branch:
                 print self.name + "'s new balance: " + self.balance
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
-
         thread.exit()
 
     def init_snapshot(self, msg):
@@ -143,12 +142,12 @@ class Branch:
         elif msg_type == "retrieve_snapshot":
             self.retrieve_snapshot_msg(msg.retrieve_snapshot)
         else:
-            print "Unrecognized message type: " + msg_type
+            print "Unrecognized message type: " + str(msg_type)
 
     def listen_for_message(self, client_socket, client_add):
         msg = client_socket.recv(1024)
         if msg:
-            for m in msg.split('\0'):
+            for m in msg.split('\0')[:-1]:
                 branch_message = bank_pb2.BranchMessage()
                 branch_message.ParseFromString(m)
                 self.parse_message(client_socket, client_add, branch_message)
@@ -169,11 +168,10 @@ class Branch:
             try:
                 client_socket, client_add = self.socket.accept()
                 thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
-                # self.listen_for_message(client_socket, client_add) # start a new thread here
+                #self.listen_for_message(client_socket, client_add) # start a new thread here
                 thread.start_new_thread(self.send_transfer_msgs())
                 # self.send_tranfer_messages() # start another thread here
                 print(self.balance)
-                print(self.branches)
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
