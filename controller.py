@@ -55,8 +55,6 @@ def main():
     message = bank_pb2.BranchMessage()
     message.init_branch.balance = each_balance
 
-    # Saves all messages so we can populate all_branches before sending
-    message_array = []
     # socket_map[<str>] -> socket object
     # Maps the name of a branch to the socket that
     # can be used to send data to it.
@@ -71,17 +69,13 @@ def main():
         branch.ip = ip
         branch.port = port
         message.init_branch.all_branches.extend([branch])
-        message_array.append(message)
    
     # Send each message
-    for i,message in enumerate(message_array):
+    for name,ip,port in target_branches:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        s.connect((socket.gethostbyname(branch.ip), branch.port))
+        s.connect((socket.gethostbyname(ip), port))
         s.sendall(message.SerializeToString()+'\0')
-        socket_map[target_branches[i][0]] = s
-
-    return
+        socket_map[name] = s
 
     # Snapshots!
     global_snapshot_id = 0
@@ -118,10 +112,6 @@ def main():
     #return_snapshot = message.return_snapshot
 
     #branch = populate_branch(message.init_branch.Branch())
-
-
-
-
 
 if main():
     print("AN ERROR OCCURRED: Non-zero return value")
