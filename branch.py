@@ -45,9 +45,9 @@ class Branch:
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
                     ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
-            #print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
+            print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
             self.balance += msg.money
-            #print("New balance: " + str(self.balance))
+            print("New balance: " + str(self.balance))
             self.balance_lock.release()
         else:
             print("Recieved wrong transfer message")
@@ -75,17 +75,16 @@ class Branch:
             transfer_message.transfer.src_branch = self.name
             transfer_message.transfer.dst_branch = name
 
-            #if self.log_bool:
-                #print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
-                #print self.name + "'s new balance: " + str(self.balance)
-            #print "Sending to " + name
+            if self.log_bool:
+                print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
+                print self.name + "'s new balance: " + str(self.balance)
+            print "Sending to " + name
             new_socket.sendall(transfer_message.SerializeToString() + '\0')
             new_socket.close() 
             time.sleep(2)
         thread.exit()
 
     def init_snapshot(self, msg):
-        print("Initializing snapshot")
         snapshot_id = msg.snapshot_id
 
         marker_msg = bank_pb2.BranchMessage()
@@ -96,10 +95,6 @@ class Branch:
         self.send_marker_msgs(marker_msg, snap_obj)
 
     def send_marker_msgs(self, marker_msg, snap_obj):
-        print("Marker:")
-        print(marker_msg)
-        print("Snap_obj:")
-        print(snap_obj)
         snapshot_id = int(marker_msg.marker.snapshot_id)
 
         #sending marker messages to all other branches
@@ -116,7 +111,6 @@ class Branch:
                 new_socket.sendall(marker_msg.SerializeToString() + '\0')
                 new_socket.close()
 
-        print("Adding " + str(snapshot_id) + " to map to " + str(snap_obj))
         self.snapshots[snapshot_id] = snap_obj
 
     def receive_marker_msg(self, msg):
@@ -127,23 +121,24 @@ class Branch:
         else:
             self.snapshots[snap_id].active_channels[msg.src_branch] = True
 
-    def retrieve_snapshot_msg(self, msg):
+    def retrieve_snapshot_msg(self, msg, client_socket):
         snap_id = int(msg.snapshot_id)
-        print(self.snapshots)
         self.snapshots[snap_id].retrieved = True
-        self.prepare_return_ss_msg(snapshots[snap_id])
+        self.prepare_return_ss_msg(self.snapshots[snap_id], client_socket)
 
-    def prepare_return_ss_msg(self, snap_obj):
+    def prepare_return_ss_msg(self, snap_obj, client_socket):
         return_msg = bank_pb2.BranchMessage()
-        local_snap = return_msg.LocalSnapshot()
-        local_snap.snapshot_id = snap_obj.snap_id
-        local_snap.balance = snap_obj.balance
+        return_msg.return_snapshot.local_snapshot.snapshot_id = snap_obj.snap_id
+        return_msg.return_snapshot.local_snapshot.balance = snap_obj.balance
         for branch_name in sorted(snap_obj.channels.iterkeys()):
-            local_snap.channel_state.append(snap_obj.channels[branch_name])
+            return_msg.return_snapshot.local_snapshot.channel_state.append(snap_obj.channels[branch_name])
+   
         
-        return_msg.local_snapshot = local_snap
-        self.controller_socket.sendall(return_msg.SerializeToString() + '\0')
-            
+        #controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #controller_socket.connect((socket.gethostbyname(self.controller[0]), self.controller[1]))
+        client_socket.sendall(return_msg.SerializeToString() + '\0')
+        client_socket.close()
+
     def parse_message(self, client_socket, client_add, msg):
         if not msg:
             print "Error: null message"
@@ -159,7 +154,7 @@ class Branch:
         elif msg_type == "marker":
             self.receive_marker_msg(msg.marker)
         elif msg_type == "retrieve_snapshot":
-            self.retrieve_snapshot_msg(msg.retrieve_snapshot)
+            self.retrieve_snapshot_msg(msg.retrieve_snapshot, client_socket)
         else:
             print "Unrecognized message type: " + str(msg_type)
 
