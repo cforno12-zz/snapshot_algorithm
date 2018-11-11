@@ -81,7 +81,6 @@ class Branch:
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
         
-        thread.exit()
     def init_snapshot(self, msg):
         snapshot_id = msg.snapshot_id
 
