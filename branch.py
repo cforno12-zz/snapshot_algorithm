@@ -49,6 +49,8 @@ class Branch:
         self.init_connections()
 
     def recieve_transfer_msg(self, msg):
+        print("Trying to receive")
+        print(msg)
         if msg.dst_branch == self.name:
             for ss_id, ss_obj in self.snapshots:
                 if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
@@ -60,9 +62,10 @@ class Branch:
             print("Recieved wrong transfer message")
             
     def send_transfer_msgs(self):
+        print(self.branch_sockets)
         for name, socket in self.branch_sockets.iteritems():
             self.balance_lock.acquire()
-            send_balance = round(random.randint(self.balance*0.01, self.balance*0.05))
+            send_balance = int(round(random.randint(self.balance*0.01, self.balance*0.05)))
             # check if we have enough money
             if (self.balance - send_balance) < 0:
                 print "Cannot send more money."
@@ -76,11 +79,11 @@ class Branch:
             transfer_message.transfer.dst_branch = name
             if self.log_bool:
                 print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
-                print self.name + "'s new balance: " + self.balance
+                print self.name + "'s new balance: " + str(self.balance)
             socket.sendall(transfer_message.SerializeToString() + '\0')
             time.sleep(self.time_interval*0.001)
+        
         thread.exit()
-
     def init_snapshot(self, msg):
         snapshot_id = msg.snapshot_id
 
@@ -151,8 +154,6 @@ class Branch:
                 branch_message = bank_pb2.BranchMessage()
                 branch_message.ParseFromString(m)
                 self.parse_message(client_socket, client_add, branch_message)
-        thread.exit()
-
 
     def run(self):
         # checking if we should log
@@ -164,14 +165,18 @@ class Branch:
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
         print "Branch on ", self.ip, "on port", self.port
+        client_socket, client_add = self.socket.accept()
+        self.listen_for_message(client_socket, client_add) # start a new thread here
+        print("initialized.")
+        print(self.name)
         while True:
+            print("Just reset loop")
             try:
                 client_socket, client_add = self.socket.accept()
-                thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
-                #self.listen_for_message(client_socket, client_add) # start a new thread here
+                print("Just received a message from", client_add)
+                #thread.start_new_thread(self.listen_for_message, (client_socket, client_add))
                 thread.start_new_thread(self.send_transfer_msgs())
-                # self.send_tranfer_messages() # start another thread here
-                print(self.balance)
+                #self.send_transfer_msgs() # start another thread here
             except KeyboardInterrupt:
                 self.socket.close()
                 print("Closing socket...")
