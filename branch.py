@@ -158,11 +158,13 @@ class Branch:
             print "Unrecognized message type: " + str(msg_type)
 
     def listen_for_message(self, client_socket, client_add):
+        print "listening for a message"
         msg = client_socket.recv(1024)
         if msg:
             for m in msg.split('\0')[:-1]:
                 branch_message = bank_pb2.BranchMessage()
                 branch_message.ParseFromString(m)
+                print "parsing message: " + m
                 self.parse_message(client_socket, client_add, branch_message)
 
     def run(self):
@@ -179,7 +181,7 @@ class Branch:
         #self.listen_for_message(client_socket, client_add)
         #time.sleep(1)
         while True:
-            print("Just reset loop")
+            print("Just reset loop in run function")
             try:
                 client_socket, client_add = self.socket.accept()
 
