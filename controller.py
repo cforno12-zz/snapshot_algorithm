@@ -66,8 +66,6 @@ def main():
         branch.port = port
         message.init_branch.all_branches.extend([branch])
 
-    print message
-   
     # Send each message
     for name,ip,port in target_branches:
         print str(ip) + " " + str(port)
@@ -80,14 +78,15 @@ def main():
     global_snapshot_id = 0
     while True:
         # Sleep between snapshots
-        sleep_time = randint(5, 10)
-        #sleep(sleep_time)
+        sleep_time = randint(3, 5)
+        sleep(sleep_time)
 
         global_snapshot_id += 1
         # Initiate a new snapshot to a random branch.
         # branch_to_initiate is the name of the branch
         branch_to_initiate = target_branches[randint(0, len(target_branches)-1)]
         print("snapshot_id: " + str(global_snapshot_id))
+        print("Starting at: " + str(branch_to_initiate[0]))
 
         # Build the message and send it
         snapshot_message = bank_pb2.BranchMessage()
@@ -97,7 +96,7 @@ def main():
         new_socket.connect((socket.gethostbyname(branch_to_initiate[1]),branch_to_initiate[2]))
         new_socket.sendall(snapshot_message.SerializeToString() + '\0')
         new_socket.close() 
-        sleep(3)
+        sleep(2)
 
         # Retrieve the snapshots
         ret = bank_pb2.BranchMessage()
@@ -115,22 +114,22 @@ def main():
             print_msg += str(snapshot_message.return_snapshot.local_snapshot.balance)
             print_msg += ", "
             sub = 0
-            for i,tup in enumerate(target_branches):
+            channels = snapshot_message.return_snapshot.local_snapshot.channel_state
+            branches_to_record = target_branches[:]
+            branches_to_record.remove((name, ip, port))
+            for i,tup in enumerate(branches_to_record):
                 other_name = tup[0]
-                if name != other_name:
-                    print_msg += other_name + "->" + name + ": "
-                    if snapshot_message.return_snapshot.local_snapshot.channel_state:
-                        print_msg += str(snapshot_message.return_snapshot.local_snapshot.channel_state[i-sub])
-                    else:
-                        print_msg += '0'
-                    print_msg += ", "
+                print_msg += other_name + "->" + name + ": "
+                if i < len(snapshot_message.return_snapshot.local_snapshot.channel_state):
+                    print(snapshot_message.return_snapshot.local_snapshot.channel_state)
+                    print_msg += str(snapshot_message.return_snapshot.local_snapshot.channel_state[i])
                 else:
-                    sub = 1
+                    print_msg += '0'
+                print_msg += ", "
 
             print(print_msg[:-2])
             ret_socket.close()
         
-        break 
     #message = bank_pb2.BranchMessage()
     #init_branch = message.init_branch
     #transfer = message.transfer

@@ -1,0 +1,28 @@
+- Languages/tools used
+    We used Python for everything. We also used Google protobuf, the socket
+    library, and other low-level native Python libraries.
+
+- How to compile/run
+    Just type "make" to host a branch with a hard-coded name. You'll probably
+    want to open a few terminals and name them yourself. You can do this with
+    "python branch.py <name> <port> <interval>" - it's more practical. You can
+    do "python controller.py <total_money> <branches text file>" to run the
+    controller, too. Fill in the text file as necessary, like <name> remote<xx>
+    <port>.
+
+- The tasks both group members worked on
+    Cris worked on the branches' snapshot and marker initialization, and threading.
+    Kyle worked on the controller, the branch transfers, and controlling output.
+
+- Completion status
+    Everything works and has been tested extensively except for the sum of the
+    snapshots. Sometimes the sum adds up correctly to the original amount of money
+    specified by the controller arguments, and sometimes it doesn't. We spent a 
+    very long time making sure that the transfers work with any number of nodes,
+    and we didn't have enough time to fix the snapshot specifics. However, you can
+    run infinitely many snapshots and have infinitely many transfers; it'll never
+    break, and the transfers add up correctly. The only thing that sometimes doesn't
+    give expected output is the sum of the elements in each snapshot.
+
+- Anything else
+    This was hard.

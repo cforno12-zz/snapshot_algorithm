@@ -41,14 +41,11 @@ class Branch:
 
     def receive_transfer_msg(self, msg):
         if str(msg.dst_branch) == str(self.name):
-            for ss_id, ss_obj in self.snapshots.iteritems():
-                if str(msg.src_branch) in ss_obj.channels:
-                    if ss_obj.retrieved == False and ss_obj.active_channels[msg.src_branch] == False:
-                        ss_obj.channels[msg.src_branch] += msg.money
             self.balance_lock.acquire()
-            print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
+            if self.log_bool:
+                print("Just received " + str(msg.money) + " from branch " + str(msg.src_branch))
+                print("New balance: " + str(self.balance+msg.money))
             self.balance += msg.money
-            print("New balance: " + str(self.balance))
             self.balance_lock.release()
         else:
             print("Recieved wrong transfer message")
@@ -70,6 +67,10 @@ class Branch:
                 self.balance_lock.release()
                 continue
             self.balance -= send_balance
+            for ss_id, ss_obj in self.snapshots.iteritems():
+                if str(name) in ss_obj.channels:
+                    if ss_obj.retrieved == False: # and ss_obj.active_channels[name] == False:
+                        ss_obj.channels[name] += send_balance
             self.balance_lock.release()
             transfer_message = bank_pb2.BranchMessage()
             transfer_message.transfer.money = send_balance
@@ -79,10 +80,10 @@ class Branch:
             if self.log_bool:
                 print "Transferring $" + str(send_balance) + " from " + self.name + " to " + name
                 print self.name + "'s new balance: " + str(self.balance)
-            print "Sending to " + name
             new_socket.sendall(transfer_message.SerializeToString() + '\0')
-            new_socket.close() 
-            time.sleep(2)
+            new_socket.close()
+            random_time = random.randint(1, self.time_interval)
+            time.sleep(random_time*.001)
         thread.exit()
 
     def init_snapshot(self, msg):
@@ -133,7 +134,6 @@ class Branch:
         return_msg.return_snapshot.local_snapshot.balance = snap_obj.balance
         for branch_name in sorted(snap_obj.channels.iterkeys()):
             return_msg.return_snapshot.local_snapshot.channel_state.append(snap_obj.channels[branch_name])
-   
         
         #controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #controller_socket.connect((socket.gethostbyname(self.controller[0]), self.controller[1]))

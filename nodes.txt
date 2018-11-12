@@ -1,2 +1,0 @@
-branch1 remote00 9090
-branch2 remote00 9091
